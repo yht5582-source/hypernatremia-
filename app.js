@@ -1,5 +1,5 @@
 import {analyze,plan,num,errors,ranges,tbwFactor,trend} from './clinical.js';
-import {createTutorial,getTeachingCase,getTeachingTracking} from './tutorial.js';
+import {createTutorial,getTeachingCase,getTeachingTracking} from './tutorial.js?v=1.1.1';
 const defaults={duration:'unknown',volume:'unknown',drop:'8',flags:[]};let s={...defaults,flags:[]},logs=[],step=0;
 const labels={na:'血清Na',weight:'體重',age:'年齡',glucose:'血糖',cr:'Creatinine',egfr:'eGFR',sbp:'收縮壓',k:'血鉀',ca:'總血鈣',uosm:'尿滲透壓 Uosm',urine:'24小時尿量',una:'尿Na',uk:'尿K',serumOsm:'實測血清滲透壓',factor:'TBW係數',insensible:'不顯性失水',giLoss:'腎外持續自由水流失',urineLoss:'尿液持續自由水流失',intake:'其他已提供自由水',drop:'首24小時下降目標'};
 const flags=[['poorIntake','飲水不足／吞嚥或照護問題'],['gi','腹瀉／嘔吐／引流'],['fever','發燒／流汗／呼吸失水'],['osmotic','mannitol／高尿素負荷'],['sodium','高張NaCl／NaHCO₃／鈉負荷'],['lithium','鋰鹽或其他致腎性尿崩症藥物'],['diuretics','使用利尿劑'],['recovery','解除阻塞／AKI恢復期'],['brain','腦傷／腦部手術／下視丘病變']];
