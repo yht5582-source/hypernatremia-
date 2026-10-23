@@ -21,6 +21,14 @@ TBW＝體重×係數。男性0.6、女性0.5；≥65歲各下修0.05，可由臨
 
 成人最佳矯正速度尚未確定；2023與2025觀察性研究的存活結果不一致。0.5 mmol/L/hr及已測區間≤24小時下降>10為複核提示，不表示所有成人都需同一矯正速度。初期每2–4小時複測Na，並重新評估血糖、K、尿量及神經狀態。
 
+## 1.2.0 除錯更新（2026-10-23）
+
+- 原因分析：Uosm 300–800 依尿溶質排出區分滲透性利尿（≥1000 mOsm/day）與部分濃縮障礙／腎功能不全（<750），少尿不再被標為滲透性利尿。
+- 補水計畫：新增Adrogué–Madias每公升輸液Na變化交叉核對（D5W、0.2%、0.45% NaCl，可加KCl）。
+- 追蹤：圖表加上首24小時目標虛線，Na<145時刻度正確。
+- 教學：首頁「載入教學案例」改用同一組教學病例資料；教學對照表隨輸入即時更新；載入模擬採血一律套用教學病例，不混入目前病人資料。
+- 所有模組加版本參數避免快取混用；`node tests.mjs` 引擎測試。
+
 ## 使用與部署
 
 純靜態HTML/CSS/JavaScript，無外部套件及伺服器，從網頁伺服器開啟index.html即可。ES modules需經HTTP/HTTPS使用。資料僅保留於本頁記憶體，重新整理即清除，不上傳、不使用localStorage。
@@ -35,4 +43,4 @@ GitHub Pages可選擇Settings → Pages → Source：GitHub Actions，使用附�
 4. [Hypernatremia, StatPearls](https://www.ncbi.nlm.nih.gov/books/NBK441960/)
 5. [Yessayan et al. Seminars in Dialysis 2021](https://pubmed.ncbi.nlm.nih.gov/34218456/)
 
-版本1.0；文獻核對日期：2026-10-05。
+版本1.2.0；文獻核對日期：2026-10-05。

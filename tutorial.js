@@ -1,4 +1,4 @@
-import {analyze,plan,trend} from './clinical.js';
+import {analyze,plan,trend} from './clinical.js?v=1.2.0';
 
 // Teaching data are fictional. They are never automatically entered into patient mode.
 const shared={drop:'8',lossReviewed:'no',route:'',factor:''};

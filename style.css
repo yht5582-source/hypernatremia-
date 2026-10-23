@@ -43,3 +43,4 @@
 .tutorial-bottom span{font-size:13px;color:var(--muted);flex:1}
 @media(max-width:760px){.tutorial-bar{padding:16px;align-items:flex-start;flex-direction:column}.tutorial-body{padding:12px}.tutorial-top{align-items:stretch;flex-direction:column}.tutorial-top select{max-width:none;width:100%}.tutorial-tabs{grid-template-columns:repeat(2,minmax(0,1fr))}.tutorial-number-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.tutorial-panel{padding:12px}.tutorial-bottom{align-items:stretch}.tutorial-bottom button{width:100%}}
 @media print{#tutorial{display:none!important}}
+.infusate{margin-top:22px;border-top:1px solid var(--border);padding-top:14px}.infusate summary{cursor:pointer;font-weight:650}.infusate .subgrid{margin-top:14px}

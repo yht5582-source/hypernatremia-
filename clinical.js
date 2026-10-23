@@ -1,4 +1,4 @@
-export const ranges={na:[100,220],weight:[20,300],age:[0,120],glucose:[20,1500],cr:[0.1,30],egfr:[0,180],sbp:[40,250],k:[1,10],ca:[3,20],uosm:[20,1800],urine:[0,20000],una:[0,400],uk:[0,300],serumOsm:[150,500],factor:[0.3,0.7],insensible:[0,5000],giLoss:[0,10000],urineLoss:[0,20000],intake:[0,20000],drop:[6,10]};
+export const ranges={na:[100,220],weight:[20,300],age:[0,120],glucose:[20,1500],cr:[0.1,30],egfr:[0,180],sbp:[40,250],k:[1,10],ca:[3,20],uosm:[20,1800],urine:[0,20000],una:[0,400],uk:[0,300],serumOsm:[150,500],factor:[0.3,0.7],insensible:[0,5000],giLoss:[0,10000],urineLoss:[0,20000],intake:[0,20000],drop:[6,10],infK:[0,40]};
 export const num=(s,k)=>s[k]===''||s[k]===undefined||s[k]===null?null:Number(s[k]);
 export function errors(s){return Object.entries(ranges).filter(([k,[lo,hi]])=>num(s,k)!==null&&(!Number.isFinite(num(s,k))||num(s,k)<lo||num(s,k)>hi)).map(([k])=>k);}
 export function tbwFactor(s){if(num(s,'factor')!==null)return num(s,'factor');if(!s.sex||num(s,'age')===null)return null;return +(s.sex==='male'?(num(s,'age')>=65?0.55:0.6):(num(s,'age')>=65?0.45:0.5)).toFixed(2);}
@@ -15,6 +15,8 @@ export function analyze(s){
   if(has('gi')||has('fever'))add('腎外失水',has('gi')?'有腹瀉、嘔吐或引流病史。':'有發燒、流汗或呼吸道失水風險。','量測引流與腸胃流失；控制發燒，重新估算不顯性失水。');
   if(os!==null&&os<300&&poly)add('疑似尿崩症／低張性多尿',`Uosm ${os}，24小時尿量 ${u} mL，符合低張性多尿線索。`,'評估AVP缺乏或腎臟AVP阻抗；由專科安排DDAVP反應／copeptin。已有高血鈉時勿自行限水試驗。');
   else if(os!==null&&os<300)add('尿液濃縮反應不足',`Uosm ${os}；${u===null?'尚缺尿量。':'尚無明確多尿證據。'}`,'確認24小時尿量、腎功能與用藥；單一Uosm不能確診尿崩症。');
+  else if(os!==null&&os<=800&&solute!==null&&solute>=1000)add('滲透性利尿',`Uosm ${os} mOsm/kg；尿溶質排出約 ${Math.round(solute)} mOsm/day（≥1000）。`,'檢查尿糖、尿素、mannitol、利尿劑及解除阻塞後利尿；依溶質來源處理並以EFWC估算持續自由水流失。');
+  else if(os!==null&&os<=800&&solute!==null&&solute<750)add('部分濃縮障礙或腎功能不全',`Uosm ${os} mOsm/kg；尿溶質排出僅約 ${Math.round(solute)} mOsm/day，不支持滲透性利尿。`,'評估AKI／CKD、部分AVP缺乏或阻抗；少尿時先確認容量與腎灌流。');
   else if(os!==null&&os<=800)add('滲透性利尿或部分濃縮障礙',`Uosm ${os} mOsm/kg${solute!==null?`；尿溶質排出約 ${Math.round(solute)} mOsm/day`:''}。`,'檢查尿糖、尿素、mannitol、利尿劑及解除阻塞後利尿；溶質排出>750–1000 mOsm/day支持滲透性利尿。');
   else if(os!==null)add('腎臟有濃縮反應',`Uosm ${os} >800。`,'優先尋找攝水不足、腎外失水或鈉負荷；高Uosm不排除尿素／葡萄糖引起的自由水流失。');
   if(gl!==null&&gl>180||has('osmotic'))add('滲透性利尿風險','有高血糖、mannitol或高尿素負荷線索。','檢驗尿糖及每日尿溶質；高血糖需同步評估DKA／HHS，治療時鈉與張力會改變。');
@@ -51,7 +53,7 @@ export function analyze(s){
  if(s.intentional==='yes')blocks.push('神經重症目標性高血鈉：需依專科目標');
  if(!s.intentional||s.intentional==='unknown')blocks.push('確認是否為目標性高血鈉');
  if(s.duration==='acute'&&has('sodium')&&s.neuro==='yes')blocks.push('急性有症狀鈉負荷：專科較快矯正路徑');
- const corrected=na!==null&&gl!==null&&gl>100?[na+1.6*(gl-100)/100,na+2.4*(gl-100)/100]:null;
+ const corrected=na!==null&&gl!==null&&gl>=200?[na+1.6*(gl-100)/100,na+2.4*(gl-100)/100]:null;
  const deficit=high&&tbw!==null?tbw*(na/140-1):null;
  return {high,adult,poly,efwc,solute,tbw,f,causes,urgent,blocks:[...new Set(blocks)],corrected,deficit,tonicity:na!==null&&gl!==null?2*na+gl/18:null};
 }
@@ -70,8 +72,15 @@ export function trend(s,logs){
  if(!Number.isFinite(baseMs)||baseNa===null)return {points:[],warnings:[]};
  if(baseMs>Date.now()+60000||logs.some(l=>Date.parse(l.time+'+08:00')<=baseMs))return {points:[],warnings:['起始採血時間須為過去時間，且早於所有追蹤時間；請修正時間後再判讀。'],invalid:true};
  const points=[{time:baseMs,na:baseNa},...logs.map(l=>({time:Date.parse(l.time+'+08:00'),na:Number(l.na)}))].sort((a,b)=>a.time-b.time);
- const warnings=[],intervals=points.slice(1).map((p,i)=>{const prev=points[i],hours=(p.time-prev.time)/3600000;const rate=(prev.na-p.na)/hours; if(rate>0.5)warnings.push('最近區間下降>0.5 mmol/L/hr，請即刻複核矯正速度及輸入／流失。');if(rate<0)warnings.push('血鈉上升：檢查持續失水、鈉負荷、給水是否足夠。');return {...p,hours,rate,drop:baseNa-p.na};});
+ const warnings=[],intervals=points.slice(1).map((p,i)=>{const prev=points[i],hours=(p.time-prev.time)/3600000;const rate=(prev.na-p.na)/hours; if(rate>0.5)warnings.push('有採血區間下降>0.5 mmol/L/hr，請即刻複核矯正速度及輸入／流失。');if(rate<0)warnings.push('血鈉上升：檢查持續失水、鈉負荷、給水是否足夠。');return {...p,hours,rate,drop:baseNa-p.na};});
  for(let i=1;i<points.length;i++)for(let j=0;j<i;j++){const h=(points[i].time-points[j].time)/3600000;if(h>0&&h<=24&&points[j].na-points[i].na>10)warnings.push('已測區間≤24小時下降>10 mmol/L，請立即複核計畫。');}
  if(intervals.length){const last=intervals.at(-1),elapsed=(last.time-baseMs)/3600000;if(elapsed>=12&&(baseNa-last.na)/elapsed<0.25&&last.na>145)warnings.push('整體矯正偏慢（<0.25 mmol/L/hr）：重新評估補水與流失；此為複核提示，勿依單一數值自動加速。');}
  return {points,intervals,warnings:[...new Set(warnings)]};
+}
+// Adrogué–Madias: change in serum Na per 1 L infusate = (infusate Na+K − serum Na)/(TBW+1). Static cross-check only.
+export const infusates=[['D5W',0],['0.2% NaCl',34],['0.45% NaCl',77]];
+export function adrogue(s){
+ const p=plan(s),na=num(s,'na'),kAdd=num(s,'infK')??0;
+ if(p.tbw===null||p.target===null)return [];
+ return infusates.map(([name,inf])=>{const perL=(inf+kAdd-na)/(p.tbw+1);return {name,inf,perL,litres:perL<0?(p.target-na)/perL:null};});
 }

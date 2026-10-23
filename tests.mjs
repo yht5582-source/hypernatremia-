@@ -1,0 +1,21 @@
+// Engine tests: node tests.mjs
+import assert from 'node:assert/strict';
+import {plan,analyze,trend,adrogue,errors} from './clinical.js';
+import {teachingCases,getTeachingCase,getTeachingTracking} from './tutorial.js';
+let n=0;const ok=(name,fn)=>{fn();n++;};
+const dh=getTeachingCase('dehydration');
+ok('dehydration matches tutorial numbers',()=>{const p=plan(dh);assert.equal(p.tbw,27);assert.equal(p.target,152);assert.equal(Math.round(p.base),1421);assert.equal(Math.round(p.efwc),900);assert.equal(Math.round(p.rate),126);assert.ok(p.eligible);});
+ok('unsafe teaching cases never produce a rate',()=>{for(const id of ['di','shock','sodium'])assert.equal(plan(getTeachingCase(id)).rate,null,id);});
+ok('all teaching cases are valid',()=>{for(const id of Object.keys(teachingCases))assert.deepEqual(errors(getTeachingCase(id)),[],id);});
+ok('oliguric Uosm 300–800 is not called osmotic diuresis',()=>{const t=analyze(getTeachingCase('shock')).causes.map(c=>c.title);assert.ok(t.includes('部分濃縮障礙或腎功能不全'));assert.ok(!t.some(x=>x.startsWith('滲透性利尿或')));});
+ok('high solute excretion is osmotic diuresis',()=>{const t=analyze({...dh,urine:'4000',uosm:'500'}).causes.map(c=>c.title);assert.ok(t.includes('滲透性利尿'));});
+ok('unknown losses block the rate',()=>{assert.equal(plan({...dh,insensible:''}).rate,null);});
+ok('negative net water gives no rate',()=>{const p=plan({...dh,intake:'9000'});assert.ok(p.net<0);assert.equal(p.eligible,false);});
+ok('target floors at 145',()=>{assert.equal(plan({...dh,na:'148'}).target,145);});
+ok('Adrogué–Madias D5W litres ≈ free-water estimate',()=>{const d=adrogue(dh)[0];assert.equal(Math.round(d.perL*100)/100,-5.71);assert.ok(Math.abs(d.litres*1000-plan(dh).base)<100);});
+ok('Adrogué–Madias: 0.45% needs more volume than D5W; KCl reduces effect',()=>{const [d,,h]=adrogue(dh);assert.ok(h.litres>d.litres);assert.ok(adrogue({...dh,infK:'20'})[0].litres>d.litres);});
+ok('simulated tracking stays within limits',()=>{const t=getTeachingTracking();assert.deepEqual(trend({...dh,baselineTime:t.baselineTime},t.logs).warnings,[]);});
+ok('fast drop warns',()=>{const t=getTeachingTracking();const logs=[{...t.logs[0],na:'156'}];assert.ok(trend({...dh,baselineTime:t.baselineTime},logs).warnings.some(w=>w.includes('0.5')));});
+ok('>10 within 24 h warns',()=>{const t=getTeachingTracking();const logs=t.logs.map((l,i)=>({...l,na:[158,155,152,148][i]}));assert.ok(trend({...dh,baselineTime:t.baselineTime},logs).warnings.some(w=>w.includes('>10')));});
+ok('log before baseline is invalid',()=>{const t=getTeachingTracking();assert.ok(trend({...dh,baselineTime:t.logs[1].time},t.logs).invalid);});
+console.log(`${n} tests passed`);
