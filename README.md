@@ -10,7 +10,7 @@
 - 立場聲明與草案：AVP-D／AVP-R命名工作組2022、KDIGO 2026 AKI公開審查草案。
 - 綜述與研究：AAFP 2023、Yun 2023、Refardt 2023綜述、Goshima 2022、Fenske 2018、Refardt 2023、Chauhan 2019、Feigin 2023、Chacon-Palma 2025。
 
-分頁：診斷指引、治療指引、特殊族群、示範病例（5例，可帶入計算）、20題考題、證據來源、計算導航。`guideline.js`為無DOM的引擎與資料，`guide.js`為介面，`node tests.mjs`驗證路徑、病例數字與考題算式。
+分頁：診斷指引、治療指引、心智圖（`mindmap.js`）、特殊族群、示範病例（5例，可帶入計算）、20題考題、證據來源、計算導航。`guideline.js`為無DOM的引擎與資料，`guide.js`為介面，`node tests.mjs`驗證路徑、病例數字與考題算式。
 
 劑量來自國際文獻，尚未對照台灣仿單與健保規定。
 
@@ -57,4 +57,4 @@ GitHub Pages可選擇Settings → Pages → Source：GitHub Actions，使用附�
 
 完整指引來源見網頁「證據來源」分頁。
 
-版本1.3.0；文獻核對日期：2026-11-01。
+版本1.4.0；文獻核對日期：2026-11-01。

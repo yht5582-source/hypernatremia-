@@ -1,6 +1,7 @@
-import {CHECKED,sources,kindLabels,classify,rateGuide,waterEstimate,correctedNa,severity,demoCases,questions,shuffle,scoreQuiz} from './guideline.js?v=1.3.0';
+import {CHECKED,sources,kindLabels,classify,rateGuide,waterEstimate,correctedNa,severity,demoCases,questions,shuffle,scoreQuiz} from './guideline.js?v=1.4.0';
+import {mindmaps,layoutMap,collapsibleIds} from './mindmap.js?v=1.4.0';
 
-const tabs=[['diag','診斷指引'],['treat','治療指引'],['special','特殊族群'],['cases','示範病例'],['quiz','20 題考題'],['evidence','證據來源'],['calc','計算導航']];
+const tabs=[['diag','診斷指引'],['treat','治療指引'],['map','心智圖'],['special','特殊族群'],['cases','示範病例'],['quiz','20 題考題'],['evidence','證據來源'],['calc','計算導航']];
 const root=document.querySelector('#guide-root'),calc=document.querySelector('#calc-root'),modes=document.querySelector('#modes');
 const fmt=(x,d=0)=>x===null||x===undefined?'—':Number(x).toLocaleString('zh-TW',{maximumFractionDigits:d,minimumFractionDigits:d});
 const esc=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -10,7 +11,8 @@ const table=(head,rows)=>`<div class="table-wrap"><table class="gl-table"><thead
 const steps=list=>`<ol class="pathway">${list.map(([t,b,ids])=>`<li><div><strong>${t}</strong><p>${b}</p>${ids?chips(ids):''}</div></li>`).join('')}</ol>`;
 const notice=(body,kind='')=>`<div class="notice ${kind}">${body}</div>`;
 
-let view='diag',input={onset:'unknown',shock:'no',sx:'no',load:'no',volume:''},answers={},qIndex=0,optionOrder={},caseId=demoCases[0].id,shown=false;
+let view='diag',input={onset:'unknown',shock:'no',sx:'no',load:'no',volume:''},answers={},qIndex=0,optionOrder={},caseId=demoCases[0].id,mapId='diag',mmSelected=null,mmFit=false;
+const mmCollapsed={diag:new Set(),treat:new Set()};
 
 const num=(k,label,unit)=>`<label class="field"><span>${label}</span><div class="input-wrap"><input type="number" inputmode="decimal" step="any" min="0" data-gl="${k}" value="${esc(input[k]??'')}" placeholder="請輸入">${unit?`<em>${unit}</em>`:''}</div></label>`;
 const pick=(k,label,opts)=>`<label class="field"><span>${label}</span><select data-gl="${k}">${opts.map(([v,t])=>`<option value="${v}" ${input[k]===v?'selected':''}>${t}</option>`).join('')}</select></label>`;
@@ -47,7 +49,7 @@ function treatView(){return `<div class="workspace guide-grid"><section class="s
 ['2. 判斷症狀與時間','48小時內為急性；超過48小時或時間不明，都按慢性處理。',['KJIM']],
 ['3. 計算水量','總缺水＝TBW×(Na/140−1)。TBW係數男0.6、女0.5，長者各扣0.05。每日給水＝矯正量＋不顯性流失＋持續流失。',['KJIM']],
 ['4. 選輸液','依灌流與容量選擇，見下表。能安全吞嚥時優先口服或鼻胃管給水。',['KJIM','SFE','AAFP']],
-['5. 複驗調整','初期每2–4小時驗Na，每次重算速度、輸入與尿量。AVP-D復甦期至少每4小時。',['KJIM','SFE']],
+['5. 複驗調整','初期每2–4小時驗Na，每次重算速度、輸入與尿量。AVP-D復甦期至少每4小時。',['STATPEARLS','SFE']],
 ['6. 治療DI','AVP-D用DDAVP；AVP-R停致病藥，可用thiazide、amiloride或NSAID。見特殊族群。',['KJIM','SFE']]])}
 <h3 class="guide-title">矯正速度：各來源比較</h3>${table(['情境','速度','24小時上限','來源與層級'],[
 ['慢性或時間不明','≤0.5 mmol/L/h','10 mmol/L',chip('SFE')+' 指引，針對AVP-D'],
@@ -103,6 +105,42 @@ function quizView(){
  <div class="actions"><button class="button secondary" data-q="${qIndex-1}" ${qIndex===0?'disabled':''}>上一題</button><button class="button" data-q="${qIndex+1}" ${qIndex===questions.length-1?'disabled':''}>下一題</button></div></article></section>`;
 }
 
+const mmColors=['#1255ef','#0f7a5a','#a8581a','#7a3fb5','#b3363e','#0f6e8c','#5b6478'];
+const mmTints=['#e9f0fe','#e3f3ed','#f8ecdf','#f1eafa','#fbe9ea','#e2f1f6','#eceef3'];
+function mapNode(n,c,tint){
+ const selected=n.id===mmSelected,fill=n.depth===0?'#10224b':n.depth===1?c:n.depth===2?tint:'#fff',stroke=n.depth===0?'#10224b':c,text=n.depth<=1?'#fff':'#10224b',lh=n.fs*1.35,y0=n.y+(n.h-n.lines.length*lh)/2+n.fs*1.02,toggle=n.hasKids&&n.depth>0;
+ const label=n.lines.join('')+(toggle?(n.collapsed?'，已收合':'，已展開'):'');
+ return `<g class="mm-node" data-node="${n.id}" tabindex="0" role="button" aria-label="${esc(label)}"${toggle?` aria-expanded="${!n.collapsed}"`:''}><rect x="${n.x}" y="${n.y}" width="${n.w}" height="${n.h}" rx="${n.depth<2?10:6}" fill="${fill}" stroke="${stroke}" stroke-width="${selected?3:n.depth===3?1:1.5}"/>${n.lines.map((l,i)=>`<text x="${n.x+n.w/2-(toggle?(n.side>0?9:-9):0)}" y="${y0+i*lh}" text-anchor="middle" font-size="${n.fs}" font-weight="${n.depth<2?700:n.depth===2?600:400}" fill="${text}">${esc(l)}</text>`).join('')}${toggle?`<text x="${n.side>0?n.x+n.w-11:n.x+11}" y="${n.y+n.h/2+5}" text-anchor="middle" font-size="15" font-weight="700" fill="${text}">${n.collapsed?'＋':'−'}</text>`:''}</g>`;
+}
+function mapSvg(){
+ const m=mindmaps[mapId],L=layoutMap(m,mmCollapsed[mapId]);
+ const links=L.links.map(l=>{const x1=l.side>0?l.from.x+l.from.w:l.from.x,y1=l.from.y+l.from.h/2,x2=l.side>0?l.to.x:l.to.x+l.to.w,y2=l.to.y+l.to.h/2,mx=(x1+x2)/2;return `<path d="M${x1} ${y1}C${mx} ${y1} ${mx} ${y2} ${x2} ${y2}" fill="none" stroke="${mmColors[l.branch%7]}" stroke-width="${l.to.depth===1?3:1.6}"/>`;}).join('');
+ return `<svg class="mm-svg" viewBox="0 0 ${L.width} ${L.height}" style="min-width:${mmFit?0:Math.round(L.width*0.9)}px" role="group" aria-label="${esc(m.title)}">${links}${L.nodes.map(n=>mapNode(n,n.branch<0?'#10224b':mmColors[n.branch%7],n.branch<0?'#fff':mmTints[n.branch%7])).join('')}</svg>`;
+}
+function mapOutline(){
+ const row=(n,i)=>{const c=n.c??[];const body=`<span>${esc(n.t)}</span>${n.src?.length?chips(n.src):''}`;return c.length?`<li><details open><summary>${body}</summary><ul>${c.map(row).join('')}</ul></details></li>`:`<li>${body}</li>`;};
+ return `<ul class="mm-outline">${mindmaps[mapId].c.map((n,i)=>`<li class="mm-top" style="--mm:${mmColors[i%7]}"><details ${i===0?'open':''}><summary>${i+1}. ${esc(n.t)}</summary><ul>${(n.c??[]).map(row).join('')}</ul></details></li>`).join('')}</ul>`;
+}
+function findMapNode(id){let n=mindmaps[mapId];for(const i of id.split('.').slice(1))n=n.c[Number(i)];return n;}
+function renderMapBody(focusId){
+ const c=document.querySelector('#mm-body');if(!c)return;
+ const keep=focusId?c.querySelector('.mm-canvas')?.scrollLeft:null;
+ const sel=mmSelected?findMapNode(mmSelected):null;
+ c.innerHTML=`<div class="mm-canvas">${mapSvg()}</div><div class="mm-detail" aria-live="polite">${sel?`<strong>${esc(sel.t.replace('\n',' '))}</strong> ${sel.src?.length?chips(sel.src):'<span class="hint">分類節點，來源見其分支。</span>'}`:'<span class="hint">點選節點可查看來源；有＋／−的節點可收合或展開。</span>'}</div>${mapOutline()}`;
+ const canvas=c.querySelector('.mm-canvas');canvas.scrollLeft=keep??(canvas.scrollWidth-canvas.clientWidth)/2;
+ if(focusId)document.querySelector(`[data-node="${focusId}"]`)?.focus({preventScroll:true});
+}
+function mapView(){
+ const m=mindmaps[mapId];
+ return `<section class="surface mm-wide"><h2 id="section-title">心智圖</h2><p class="intro">把診斷與治療指引濃縮成一張圖。內容與指引分頁相同，每個節點都可查來源。</p><div class="mm-tools"><div class="case-tabs"><button class="${mapId==='diag'?'selected':''}" data-map="diag" aria-pressed="${mapId==='diag'}">診斷</button><button class="${mapId==='treat'?'selected':''}" data-map="treat" aria-pressed="${mapId==='treat'}">治療</button></div><div class="mm-actions"><button class="quiet" data-mm="expand">全部展開</button><button class="quiet" data-mm="collapse">只看主幹</button><button class="quiet mm-fit" data-mm="fit" aria-pressed="${mmFit}">${mmFit?'放大閱讀':'縮至全圖'}</button><button class="quiet" data-mm="print">列印</button></div></div><h3 class="mm-print-title">${esc(m.title)}</h3><div id="mm-body"></div></section>`;
+}
+function toggleMapNode(id){
+ const n=findMapNode(id),depth=id.split('.').length-1;
+ mmSelected=id;
+ if(n.c?.length&&depth>0){const s=mmCollapsed[mapId];s.has(id)?s.delete(id):s.add(id);}
+ renderMapBody(id);
+}
+
 function evidenceView(){
  const groups=['guide','stmt','draft','review','trial','obs'];
  return `<section class="surface wide"><h2 id="section-title">證據來源</h2><p class="intro">查證日期 ${CHECKED}。</p>${framing()}
@@ -133,8 +171,9 @@ function render(scroll=false){
  modes.innerHTML=tabs.map(([id,t],i)=>`<button data-mode="${id}" class="${id===view?'active':''}" ${id===view?'aria-current="page"':''}><span class="step-num">${String(i+1).padStart(2,'0')}</span><span>${t}</span></button>`).join('');
  const isCalc=view==='calc';
  calc.hidden=!isCalc;root.hidden=isCalc;
- if(!isCalc)root.innerHTML=`<main class="guide-main">${({diag:diagView,treat:treatView,special:specialView,cases:casesView,quiz:quizView,evidence:evidenceView})[view]()}</main>`;
+ if(!isCalc)root.innerHTML=`<main class="guide-main">${({diag:diagView,treat:treatView,map:mapView,special:specialView,cases:casesView,quiz:quizView,evidence:evidenceView})[view]()}</main>`;
  renderResults();
+ if(view==='map')renderMapBody();
  if(scroll)modes.scrollIntoView({block:'start'});
 }
 function go(id,scroll=true){view=tabs.some(t=>t[0]===id)?id:'diag';history.replaceState(null,'','#'+view);render(scroll);}
@@ -147,6 +186,13 @@ document.addEventListener('click',e=>{
  if(el.dataset.loadCase){const c=demoCases.find(x=>x.id===el.dataset.loadCase);document.dispatchEvent(new CustomEvent('hn-load-case',{detail:{...c.values,flags:[...c.values.flags]}}));go('calc');}
  if(el.dataset.answer!==undefined){const q=questions[qIndex];if(answers[q.id]===undefined){answers[q.id]=el.dataset.answer;render();document.querySelector('.question .notice')?.focus?.();}}
  if(el.dataset.q!==undefined){qIndex=Number(el.dataset.q);render();}
+ if(el.dataset.map){mapId=el.dataset.map;mmSelected=null;render();}
+ if(el.dataset.mm==='expand'){mmCollapsed[mapId].clear();renderMapBody();}
+ if(el.dataset.mm==='collapse'){mmCollapsed[mapId]=new Set(collapsibleIds(mindmaps[mapId]).filter(id=>id.split('.').length===2));renderMapBody();}
+ if(el.dataset.mm==='fit'){mmFit=!mmFit;el.textContent=mmFit?'放大閱讀':'縮至全圖';el.setAttribute('aria-pressed',mmFit);renderMapBody();}
+ if(el.dataset.mm==='print'){mmCollapsed[mapId].clear();renderMapBody();window.print();}
  if(el.dataset.quiz==='reset'){answers={};optionOrder={};qIndex=0;render();}
 });
+document.addEventListener('click',e=>{const g=e.target.closest?.('[data-node]');if(g)toggleMapNode(g.dataset.node);});
+document.addEventListener('keydown',e=>{const g=e.target.closest?.('[data-node]');if(g&&(e.key==='Enter'||e.key===' ')){e.preventDefault();toggleMapNode(g.dataset.node);}});
 go(location.hash.slice(1)||'diag',false);

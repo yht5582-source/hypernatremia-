@@ -1,5 +1,5 @@
 // Guideline synthesis, decision engine, demo cases and exam questions. No DOM access: node tests.mjs imports this file.
-import {tbwFactor} from './clinical.js?v=1.3.0';
+import {tbwFactor} from './clinical.js?v=1.4.0';
 
 export const CHECKED='2026-11-01';
 // kind: guide=guideline/guidance, stmt=position statement, review=narrative review, trial=diagnostic or treatment trial, obs=observational, draft=public-review draft
@@ -14,6 +14,7 @@ export const sources={
  AAFP:{label:'AAFP 2023',kind:'review',url:'https://www.aafp.org/pubs/afp/issues/2023/1100/sodium-disorders-hyponatremia-hypernatremia.html',cite:'Miller NE, Rushlow D, Stacey SK. Diagnosis and management of sodium disorders. Am Fam Physician 2023;108(5):476–486.',use:'學會期刊綜述，含SORT分級：成人24小時12 mEq/L（B級）。'},
  KJIM:{label:'Yun 2023',kind:'review',url:'https://www.kjim.org/journal/view.php?number=170760',cite:'Yun G, Baek SH, Kim S. Evaluation and management of hypernatremia in adults. Korean J Intern Med 2023;38(3):290–302.',use:'八步診斷與六步治療架構、公式與閾值。'},
  FICM:{label:'FICM 2022',kind:'review',url:'https://ficm.ac.uk/documents/how-would-you-treat-lithium-induced-nephrogenic-di',cite:'Faculty of Intensive Care Medicine. Case of the Month #6: Diabetes insipidus. How would you treat lithium induced nephrogenic DI? 2022.',use:'英國重症醫學院教學資料：鋰鹽腎性DI的給水、用藥與注意事項。'},
+ STATPEARLS:{label:'StatPearls',kind:'review',url:'https://www.ncbi.nlm.nih.gov/books/NBK441960/',cite:'Hypernatremia. StatPearls, NCBI Bookshelf.',use:'急性矯正期每2–4小時追蹤Na。'},
  AVPR:{label:'Refardt 2023綜述',kind:'review',url:'https://pmc.ncbi.nlm.nih.gov/articles/PMC11162367/',cite:'Refardt J, Atila C, Christ-Crain M. New insights on diagnosis and treatment of AVP deficiency. Rev Endocr Metab Disord 2024;25(3):639–649.',use:'多尿定義、copeptin判讀與檢測流程。'},
  GOSHIMA:{label:'Goshima 2022',kind:'review',url:'https://pmc.ncbi.nlm.nih.gov/articles/PMC8878611/',cite:'Goshima T, et al. Treatment of acute hypernatremia caused by sodium overload in adults: a systematic review. Medicine 2022;101(8):e28945.',use:'急性鈉負荷：18例個案的系統性回顧，未做統計檢定。'},
  FENSKE:{label:'Fenske 2018',kind:'trial',url:'https://pubmed.ncbi.nlm.nih.gov/30067922/',cite:'Fenske W, et al. A copeptin-based approach in the diagnosis of diabetes insipidus. N Engl J Med 2018;379:428–439.',use:'高張食鹽水刺激copeptin 96.5%對限水試驗76.6%。'},
@@ -89,7 +90,7 @@ export function waterEstimate(i){
 // Fictional demo cases. values follow the same shape as tutorial.js and can be loaded into the calculator.
 const base={drop:'8',factor:'',insensible:'',giLoss:'',urineLoss:'',intake:'',lossReviewed:'no',route:'',intentional:'no',flags:[]};
 export const demoCases=[
- {id:'elder',title:'長者低攝水性脫水',tag:'ESPEN＋慢性路徑',src:['ESPEN','KJIM','SFE','AAFP'],
+ {id:'elder',title:'長者低攝水性脫水',tag:'ESPEN＋慢性路徑',src:['ESPEN','KJIM','SFE','AAFP','STATPEARLS'],
   story:'84 歲女性，住養護機構，失智且吞嚥偏慢。一週來進食飲水減少，今天較嗜睡。血壓 122/70，心跳 96。Na 158，血糖 120，Cr 1.1，48 kg，Uosm 850，尿量 500 mL/day。',
   values:{...base,age:'84',sex:'female',weight:'48',na:'158',glucose:'120',cr:'1.1',egfr:'45',sbp:'122',renal:'stable',duration:'unknown',volume:'hypo',hemo:'stable',neuro:'no',urine:'500',uosm:'850',una:'15',uk:'40',k:'4.2',ca:'9.0',serumOsm:'330',flags:['poorIntake']},
   steps:[

@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {plan,analyze,trend,adrogue,errors} from './clinical.js';
 import {teachingCases,getTeachingCase,getTeachingTracking} from './tutorial.js';
 import {sources,classify,rateGuide,waterEstimate,correctedNa,severity,efwc,solute,deficit,perLitre,demoCases,questions,shuffle,scoreQuiz} from './guideline.js';
+import {mindmaps,layoutMap,wrap,collapsibleIds} from './mindmap.js';
 let n=0;const ok=(name,fn)=>{fn();n++;};
 const dh=getTeachingCase('dehydration');
 ok('dehydration matches tutorial numbers',()=>{const p=plan(dh);assert.equal(p.tbw,27);assert.equal(p.target,152);assert.equal(Math.round(p.base),1421);assert.equal(Math.round(p.efwc),900);assert.equal(Math.round(p.rate),126);assert.ok(p.eligible);});
@@ -47,4 +48,11 @@ ok('exam: correct option is not a length giveaway',()=>{const longest=questions.
 ok('exam arithmetic matches the engine',()=>{const q=id=>questions.find(x=>x.id===id).a;assert.equal(correctedNa(150,600).hillier,162);assert.ok(q(3).includes('162'));assert.equal(solute(4000,450),1800);assert.ok(q(6).includes('1800'));assert.equal(efwc(3000,40,30,160),1687.5);assert.ok(q(8).includes('1690'));assert.equal(Math.round(deficit(30,166)*10)/10,5.6);assert.ok(q(9).includes('5.6'));assert.equal(Math.round(perLitre(0,160,42)*10)/10,-3.7);assert.ok(q(15).includes('3.7'));assert.equal(severity(153),'中度');assert.equal(classify({na:'158',uosm:'200',urine:'4000',postUosm:'240'}).code,'avpr');});
 ok('scoreQuiz and shuffle',()=>{const a={};for(const q of questions)a[q.id]=q.a;assert.equal(scoreQuiz(a).correct,20);a[1]='x';const s=scoreQuiz(a);assert.equal(s.correct,19);assert.equal(s.by['診斷'].correct,7);assert.equal(scoreQuiz({}).answered,0);const q=questions[0],o=shuffle([q.a,...q.w]);assert.deepEqual([...o].sort(),[q.a,...q.w].sort());});
 ok('all sources have citation, link and use',()=>{for(const [k,s] of Object.entries(sources)){assert.ok(/^https:/.test(s.url),k);assert.ok(s.cite&&s.use&&s.label,k);}});
+// Mind maps
+const walk=(m,fn)=>{fn(m);(m.c??[]).forEach(k=>walk(k,fn));};
+ok('mind maps cover diagnosis and treatment with valid sources',()=>{assert.deepEqual(Object.keys(mindmaps),['diag','treat']);for(const m of Object.values(mindmaps)){assert.ok(m.c.length>=5);walk(m,x=>{for(const k of x.src??[])assert.ok(sources[k],k);if(!x.c?.length)assert.ok(x.src?.length>0,x.t);});}});
+ok('mind map boxes never overlap, expanded or collapsed',()=>{for(const m of Object.values(mindmaps)){for(const col of [new Set(),new Set(collapsibleIds(m).filter(id=>id.split('.').length===2)),new Set(['r.0.0','r.2'])]){const {nodes,width,height}=layoutMap(m,col);for(const a of nodes){assert.ok(a.x>=0&&a.y>=0&&a.x+a.w<=width&&a.y+a.h<=height,a.t);for(const b of nodes)if(a!==b)assert.ok(a.x+a.w<=b.x||b.x+b.w<=a.x||a.y+a.h<=b.y||b.y+b.h<=a.y,`${a.t} / ${b.t}`);}}}});
+ok('collapsing hides descendants',()=>{const m=mindmaps.diag,all=layoutMap(m).nodes.length,one=layoutMap(m,new Set(['r.3'])).nodes;assert.ok(one.length<all);assert.ok(one.find(n=>n.id==='r.3').collapsed);assert.ok(!one.some(n=>n.id.startsWith('r.3.')));});
+ok('wrap keeps ASCII tokens whole',()=>{const lines=wrap('DDAVP IV／IM 1–2 µg 稀釋尿再現才追加',8);assert.ok(lines.includes('DDAVP IV／')||lines.some(l=>l.includes('DDAVP')));assert.equal(lines.join('').replace(/\s/g,''),'DDAVPIV／IM1–2µg稀釋尿再現才追加');assert.deepEqual(wrap('高血鈉診斷\nNa >145 mmol/L',10)[0],'高血鈉診斷');});
+ok('mind-map thresholds match the engine',()=>{assert.equal(classify({na:'155',uosm:'200',urine:'4000',postUosm:'300'}).code,'avpd');assert.equal(classify({na:'155',uosm:'801'}).code,'extrarenal');assert.equal(rateGuide({na:'160',onset:'chronic'}).perHour,'≤0.5 mmol/L/h');assert.equal(rateGuide({na:'178',onset:'acute',sx:'yes',load:'yes'}).perHour,'1–2 mmol/L/h，持續6–8小時');});
 console.log(`${n} tests passed`);
